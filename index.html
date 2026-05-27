@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Keuken App</title>
+
+<!-- App icoon (simpele versie) -->
+<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/3075/3075977.png">
+
+<style>
+body {
+  margin:0;
+  font-family: system-ui;
+  background:#f4f6f8;
+}
+
+header {
+  background:#ffffff;
+  padding:15px;
+  font-size:20px;
+  font-weight:bold;
+  box-shadow:0 2px 5px rgba(0,0,0,0.05);
+}
+
+.container {
+  padding:15px;
+}
+
+.card {
+  background:white;
+  padding:15px;
+  margin-bottom:10px;
+  border-radius:16px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.05);
+}
+
+button {
+  background:#007bff;
+  color:white;
+  border:none;
+  border-radius:10px;
+  padding:8px 10px;
+}
+
+input {
+  padding:8px;
+  border-radius:8px;
+  border:1px solid #ddd;
+}
+
+.nav {
+  position:fixed;
+  bottom:0;
+  width:100%;
+  display:flex;
+  justify-content:space-around;
+  background:white;
+  border-top:1px solid #ddd;
+}
+
+.nav button {
+  background:none;
+  color:#666;
+  font-size:12px;
+}
+
+.active {
+  color:#007bff;
+  font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<header>🍳 Keuken App</header>
+
+<div class="container" id="content"></div>
+
+<div class="nav">
+  <button onclick="setTab('recipes')" id="tab1">Recepten</button>
+  <button onclick="setTab('list')" id="tab2">Lijst</button>
+</div>
+
+<script>
+let tab = "recipes";
+let people = 4;
+let recipes = JSON.parse(localStorage.getItem("recipes") || "[]");
+
+function save(){
+  localStorage.setItem("recipes", JSON.stringify(recipes));
+}
+
+function setTab(t){
+  tab = t;
+  render();
+}
+
+function addRecipe(){
+  let name = prompt("Recept naam:");
+  if(!name) return;
+  recipes.push({name,ings:[],base:2,sel:true});
+  save(); render();
+}
+
+function addIng(i){
+  let name = prompt("Ingrediënt:");
+  let amt = Number(prompt("Hoeveelheid:"));
+  let unit = prompt("Eenheid:");
+  recipes[i].ings.push({name,amt,unit});
+  save(); render();
+}
+
+function shopping(){
+  let totals = {};
+  recipes.forEach(r=>{
+    if(!r.sel) return;
+    let factor = people / r.base;
+    r.ings.forEach(i=>{
+      let key = i.name + " ("+i.unit+")";
+      let val = Math.round(i.amt*factor*4)/4;
+      totals[key] = (totals[key]||0)+val;
+    });
+  });
+  return totals;
+}
+
+function render(){
+  let el = document.getElementById("content");
+  el.innerHTML = "";
+
+  if(tab==="recipes"){
+    el.innerHTML += `
+      <div class='card'>
+        👥 Personen:
+        <input type='number' value='${people}' onchange='people=this.value;render()'>
+        <button onclick='addRecipe()'>+ Recept</button>
+      </div>
+    `;
+
+    recipes.forEach((r,i)=>{
+      el.innerHTML += `
+      <div class='card'>
+        <div style='display:flex;justify-content:space-between'>
+          <b>${r.name}</b>
+          <input type='checkbox' ${r.sel?'checked':''} onchange='recipes[${i}].sel=!recipes[${i}].sel;save();render()'>
+        </div>
+
+        <button onclick='addIng(${i})'>+ ingrediënt</button>
+      `;
+
+      r.ings.forEach(ing=>{
+        let val = Math.round(ing.amt*(people/r.base)*4)/4;
+        el.innerHTML += `<div>${ing.name}: ${val} ${ing.unit}</div>`;
+      });
+
+      el.innerHTML += "</div>";
+    });
+  }
+
+  if(tab==="list"){
+    let list = shopping();
+    for(let k in list){
+      el.innerHTML += `<div class='card'>🛒 ${k}: ${list[k]}</div>`;
+    }
+  }
+
+  document.getElementById("tab1").className = tab==="recipes" ? "active" : "";
+  document.getElementById("tab2").className = tab==="list" ? "active" : "";
+}
+
+render();
+</script>
+
+</body>
+</html>
+``
