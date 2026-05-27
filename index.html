@@ -156,6 +156,52 @@ function smartUnit(val,unit){
 function smartImport(text){
 
   let lines = text.split("\n");
+  let items = [];
+
+  lines.forEach(line => {
+
+    line = line.trim().toLowerCase();
+    if(!line) return;
+
+    let name = "";
+    let amount = 1;
+    let unit = "stuks";
+
+    // 🔥 haal getallen + eenheden eruit
+    let match = line.match(/(\d+)\s*(g|kg|ml|l|stuks)?/);
+
+    if(match){
+      amount = Number(match[1]);
+      if(match[2]) unit = match[2];
+    }
+
+    // 🔥 naam overhouden
+    name = line
+      .replace(/(\d+)\s*(g|kg|ml|l|stuks)?/, "")
+      .trim();
+
+    if(!name) name = "onbekend";
+
+    // 🧠 categorie detectie (simpel maar robuust)
+    let cat = "overig";
+
+    if(/ui|tomaat|paprika|komkommer/.test(name)) cat = "groente";
+    else if(/kip|rund|gehakt|vlees/.test(name)) cat = "vlees";
+    else if(/melk|kaas|yoghurt|room/.test(name)) cat = "zuivel";
+
+    items.push({
+      name: name,
+      amount: amount,
+      unit: unit,
+      cat: cat
+    });
+
+  });
+
+  return items;
+}
+``
+  let lines = text.split("\n");
   let items=[];
 
   lines.forEach(line=>{
