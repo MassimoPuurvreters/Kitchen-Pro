@@ -1,1 +1,242 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>Keuken App</title>
+
+<style>
+body {
+  margin:0;
+  font-family: system-ui;
+  background:#121212;
+  color:white;
+}
+
+header {
+  padding:15px;
+  text-align:center;
+  background:#1e1e1e;
+}
+
+.container {
+  padding:15px;
+}
+
+.block {
+  background:#1f1f1f;
+  padding:12px;
+  border-radius:12px;
+  margin-bottom:10px;
+}
+
+.row {
+  display:flex;
+  gap:5px;
+  margin-top:6px;
+}
+
+input, select {
+  flex:1;
+  padding:6px;
+  border-radius:6px;
+  border:none;
+  background:#333;
+  color:white;
+}
+
+button {
+  padding:6px 10px;
+  border:none;
+  border-radius:8px;
+  background:#007aff;
+  color:white;
+}
+
+.del {
+  background:#ff3b30;
+}
+
+.cat {
+  margin-top:10px;
+  color:#aaa;
+}
+</style>
+</head>
+
+<body>
+
+<header>🍳 Keuken App</header>
+
+<div class="container">
+
+<div class="block">
+👥 Personen:
+<input type="number" id="people" value="4">
+<button onclick="render()">Update</button>
+</div>
+
+<div id="recipes"></div>
+
+<div class="block">
+🛒 Boodschappenlijst
+<div id="list"></div>
+</div>
+
+<button onclick="addRecipe()">+ Nieuw recept</button>
+
+</div>
+
+<script>
+
+/* ✅ FIXED DATA + STORAGE */
+let recipes = JSON.parse(localStorage.getItem("recipes") || "[]");
+
+/* ✅ SAFE SAVE */
+function save(){
+  localStorage.setItem("recipes", JSON.stringify(recipes));
+}
+
+/* ✅ ADD RECIPE */
+function addRecipe(){
+  recipes.push({name:"Nieuw gerecht", ings:[]});
+  save();
+  render();
+}
+
+/* ✅ ADD INGREDIENT */
+function addIng(i){
+  recipes[i].ings.push({
+    name:"",
+    amount:0,
+    unit:"g",
+    cat:"overig"
+  });
+  save();
+  render();
+}
+
+/* ✅ REMOVE */
+function removeRecipe(i){
+  recipes.splice(i,1);
+  save();
+  render();
+}
+
+function removeIng(i,j){
+  recipes[i].ings.splice(j,1);
+  save();
+  render();
+}
+
+/* ✅ CALCULATION FIXED */
+function calc(a){
+  let p = Number(document.getElementById("people").value) || 0;
+  return a * p;
+}
+
+/* ✅ LIST BUILD FIXED */
+function buildList(){
+
+  let out = {};
+
+  recipes.forEach(r=>{
+    r.ings.forEach(i=>{
+      if(!i.name) return;
+
+      if(!out[i.cat]) out[i.cat] = {};
+
+      let key = i.name + " ("+i.unit+")";
+      let val = calc(Number(i.amount));
+
+      out[i.cat][key] = (out[i.cat][key] || 0) + val;
+    });
+  });
+
+  return out;
+}
+
+/* ✅ RENDER FIXED */
+function render(){
+
+  let html = "";
+
+  recipes.forEach((r,i)=>{
+
+    html += `
+    <div class="block">
+
+      <div class="row">
+        <input value="${r.name}" 
+        onchange="recipes[${i}].name=this.value;save()">
+
+        <button class="del" onclick="removeRecipe(${i})">🗑</button>
+      </div>
+    `;
+
+    r.ings.forEach((ing,j)=>{
+
+      let totaal = calc(Number(ing.amount));
+
+      html += `
+      <div class="row">
+
+        <input placeholder="naam" 
+        value="${ing.name}" 
+        onchange="recipes[${i}].ings[${j}].name=this.value;save()">
+
+        <input type="number" 
+        value="${ing.amount}" 
+        onchange="recipes[${i}].ings[${j}].amount=Number(this.value);save()">
+
+        <input 
+        value="${ing.unit}"
+        onchange="recipes[${i}].ings[${j}].unit=this.value;save()">
+
+        <select onchange="recipes[${i}].ings[${j}].cat=this.value;save()">
+          <option ${ing.cat=="groente"?"selected":""}>groente</option>
+          <option ${ing.cat=="vlees"?"selected":""}>vlees</option>
+          <option ${ing.cat=="zuivel"?"selected":""}>zuivel</option>
+          <option ${ing.cat=="overig"?"selected":""}>overig</option>
+        </select>
+
+        <span>${totaal}</span>
+
+        <button class="del" onclick="removeIng(${i},${j})">❌</button>
+
+      </div>
+      `;
+    });
+
+    html += `
+      <button onclick="addIng(${i})">+ ingrediënt</button>
+    </div>
+    `;
+  });
+
+  document.getElementById("recipes").innerHTML = html;
+
+  /* ✅ LIST */
+  let list = buildList();
+  let listHTML = "";
+
+  for(let cat in list){
+
+    listHTML += `<div class="cat">📂 ${cat}</div>`;
+
+    for(let k in list[cat]){
+      listHTML += `<div>${k}: ${list[cat][k]}</div>`;
+    }
+  }
+
+  document.getElementById("list").innerHTML = listHTML;
+}
+
+/* INIT */
+render();
+
+</script>
+
+</body>
+</html>
