@@ -1,1 +1,310 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Keuken AI Chef</title>
 
+<style>
+body {margin:0;font-family:system-ui;background:#121212;color:white;}
+header {padding:15px;text-align:center;background:#1e1e1e;}
+
+.container {padding:15px;}
+
+.card {
+  background:#1f1f1f;
+  padding:12px;
+  margin-bottom:12px;
+  border-radius:12px;
+}
+
+input, textarea {
+  width:100%;
+  padding:10px;
+  margin-top:5px;
+  border:none;
+  border-radius:8px;
+  background:#333;
+  color:white;
+}
+
+button {
+  margin-top:5px;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  background:#007aff;
+  color:white;
+  width:100%;
+}
+
+img {
+  width:100%;
+  border-radius:10px;
+  margin-top:8px;
+}
+
+/* 🍳 COOK MODE */
+#cookMode {
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#121212;
+  padding:20px;
+  z-index:999;
+}
+
+#cookContent {
+  font-size:28px;
+  text-align:center;
+  margin-top:50px;
+}
+</style>
+
+</head>
+<body>
+
+<header>🍳 Keuken AI Chef</header>
+
+<div class="container">
+
+<div class="card">
+👥 Personen:
+<input id="people" type="number" value="4" onchange="render()">
+</div>
+
+<div class="card">
+<h3>🤖 AI Chef</h3>
+<input id="chefInput" placeholder="kip pasta gezond">
+<button onclick="chefRecipe()">Genereer recept</button>
+<div id="chefOutput"></div>
+</div>
+
+<div class="card">
+<h3>📥 Import</h3>
+<textarea id="importText" placeholder="2 ui&#10;kip 150 g"></textarea>
+<button onclick="importRecipe()">Importeer</button>
+</div>
+
+<div class="card">
+<button onclick="addRecipe()">+ Nieuw gerecht</button>
+<div id="recipes"></div>
+</div>
+
+<div class="card">
+<h3>🛒 Boodschappenlijst</h3>
+<div id="list"></div>
+</div>
+
+</div>
+
+<!-- 🍳 COOK MODE -->
+<div id="cookMode">
+<div id="cookContent"></div>
+
+<div style="position:fixed;bottom:20px;width:100%;text-align:center;">
+<button onclick="prevStep()">⬅️</button>
+<button onclick="nextStep()">➡️</button>
+<button onclick="closeCook()">❌</button>
+</div>
+</div>
+
+<script>
+
+/* DATA */
+let recipes = JSON.parse(localStorage.getItem("recipes")||"[]");
+let checked = JSON.parse(localStorage.getItem("checked")||"{}");
+
+/* SAVE */
+function save(){
+  localStorage.setItem("recipes", JSON.stringify(recipes));
+  localStorage.setItem("checked", JSON.stringify(checked));
+}
+
+/* AI CHEF */
+function chefRecipe(){
+
+  let q = document.getElementById("chefInput").value.toLowerCase();
+  if(!q) return;
+
+  let items=[];
+  let steps=[];
+
+  if(q.includes("kip")){
+    items.push({name:"kipfilet",amount:150,unit:"g"});
+    steps.push("Snijd de kip");
+    steps.push("Bak de kip goudbruin");
+  }
+
+  if(q.includes("pasta")){
+    items.push({name:"pasta",amount:100,unit:"g"});
+    steps.push("Kook pasta");
+  }
+
+  if(q.includes("rijst")){
+    items.push({name:"rijst",amount:100,unit:"g"});
+    steps.push("Kook rijst");
+  }
+
+  if(q.includes("gezond")){
+    items.push({name:"groenten",amount:100,unit:"g"});
+    steps.push("Voeg groenten toe");
+  }
+
+  steps.push("Meng alles en serveer");
+
+  let image = `https://source.unsplash.com/400x300/?${q},food`;
+
+  window.tempRecipe = {name:q,items,steps,image};
+
+  document.getElementById("chefOutput").innerHTML = `
+    <img src
+    <button onclick="saveChef()">✅ Opslaan</button>
+  `;
+}
+
+/* SAVE AI RECEPT */
+function saveChef(){
+  recipes.push(window.tempRecipe);
+  save();
+  render();
+}
+
+/* IMPORT */
+function importRecipe(){
+
+  let text=document.getElementById("importText").value;
+  if(!text) return;
+
+  let lines=text.split("\n");
+  let items=[];
+
+  lines.forEach(l=>{
+    let parts=l.split(" ");
+    if(parts.length>=2){
+      items.push({
+        name:parts[0],
+        amount:Number(parts[1])||1,
+        unit:parts[2]||"stuks"
+      });
+    }
+  });
+
+  recipes.push({
+    name:"Import",
+    items,
+    steps:["Bereid volgens wens"],
+    image:"https://source.unsplash.com/400x300/?food"
+  });
+
+  save();
+  render();
+}
+
+/* BASIC */
+function addRecipe(){
+  recipes.push({name:"Nieuw gerecht",items:[],steps:[],image:"https://source.unsplash.com/400x300/?food"});
+  save();
+  render();
+}
+
+function removeRecipe(i){
+  recipes.splice(i,1);
+  save();
+  render();
+}
+
+/* COOK MODE */
+let currentSteps=[];
+let stepIndex=0;
+
+function startCooking(i){
+  currentSteps = recipes[i].steps || [];
+  stepIndex = 0;
+  document.getElementById("cookMode").style.display="block";
+  showStep();
+}
+
+function showStep(){
+  document.getElementById("cookContent").innerText =
+    "Stap "+(stepIndex+1)+"\n\n"+currentSteps[stepIndex];
+}
+
+function nextStep(){
+  if(stepIndex < currentSteps.length-1){
+    stepIndex++;
+    showStep();
+  }
+}
+
+function prevStep(){
+  if(stepIndex > 0){
+    stepIndex--;
+    showStep();
+  }
+}
+
+function closeCook(){
+  document.getElementById("cookMode").style.display="none";
+}
+
+/* LIST */
+function buildList(){
+  let out={};
+  let p = Number(document.getElementById("people").value);
+
+  recipes.forEach(r=>{
+    r.items.forEach(i=>{
+      let key=i.name;
+      out[key]=(out[key]||0)+(i.amount*p);
+    });
+  });
+
+  return out;
+}
+
+/* RENDER */
+function render(){
+
+  let html="";
+
+  recipes.forEach((r,i)=>{
+
+    html+=`
+    <div class="card">
+      <input value="${r.name}" onchange="recipes[${i}].name=this.value;save()">
+
+      <img src="${r     <b>Ingrediënten</b><br>
+      ${r.items.map(i=>`- ${i.amount} ${i.unit} ${i.name}`).join("<br>")}
+
+      <br><br>
+      <b>Stappen</b><br>
+      ${r.steps.map((s,i)=>`${i+1}. ${s}`).join("<br>")}
+
+      <button onclick="startCooking(${i})">👨‍🍳 Koken</button>
+      <button onclick="removeRecipe(${i})">🗑</button>
+    </div>
+    `;
+  });
+
+  document.getElementById("recipes").innerHTML=html;
+
+  let list = buildList();
+  let lhtml="";
+
+  for(let k in list){
+    lhtml+=`<div>${k}: ${list[k]}</div>`;
+  }
+
+  document.getElementById("list").innerHTML=lhtml;
+}
+
+render();
+
+</script>
+
+</body>
+</html>
