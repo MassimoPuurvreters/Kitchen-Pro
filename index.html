@@ -1,1 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
 
+<title>Keuken App Pro</title>
+
+<style>
+
+/* ==== BASIS ==== */
+body {
+  margin:0;
+  font-family: system-ui;
+  background:#121212;
+  color:white;
+}
+
+header {
+  padding:16px;
+  text-align:center;
+  font-size:18px;
+  background:#1c1c1e;
+  font-weight:600;
+}
+
+/* ==== CARDS ==== */
+.card {
+  background:#1e1e22;
+  margin:12px;
+  padding:15px;
+  border-radius:16px;
+  box-shadow:0 6px 15px rgba(0,0,0,0.4);
+}
+
+/* ==== INPUT ==== */
+input {
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:none;
+  background:#2c2c2e;
+  color:white;
+  font-size:16px;
+}
+
+/* ==== BUTTON ==== */
+button {
+  width:100%;
+  padding:12px;
+  margin-top:8px;
+  border:none;
+  border-radius:12px;
+  background:#0a84ff;
+  color:white;
+  font-weight:bold;
+}
+
+.delete {
+  background:#ff3b30;
+}
+
+/* ==== TEKST ==== */
+.title {
+  font-size:18px;
+  margin-bottom:8px;
+}
+
+.small {
+  color:#aaa;
+  font-size:14px;
+}
+
+/* ==== COOK MODE ==== */
+#cook {
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#000;
+  padding:20px;
+}
+
+#cookStep {
+  font-size:28px;
+  text-align:center;
+  margin-top:100px;
+}
+
+#cookControls {
+  position:absolute;
+  bottom:20px;
+  width:100%;
+}
+
+</style>
+
+</head>
+<body>
+
+<header>🍳 Keuken App</header>
+
+<!-- INPUT -->
+<div class="card">
+<input id="input" placeholder="bijv: kip pasta gezond">
+<button onclick="makeRecipe()">✨ AI recept maken</button>
+</div>
+
+<!-- PREVIEW -->
+<div id="preview" class="card"></div>
+
+<!-- OPSLAAN -->
+<div class="card">
+<button onclick="saveRecipe()">✅ Opslaan</button>
+</div>
+
+<!-- RECEPTEN -->
+<div id="recipes"></div>
+
+<!-- KOOK MODUS -->
+<div id="cook">
+<div id="cookStep"></div>
+
+<div id="cookControls">
+<button onclick="prevStep()">⬅️ Vorige</button>
+<button onclick="nextStep()">➡️ Volgende</button>
+<button onclick="closeCook()">❌ Stop</button>
+</div>
+</div>
+
+<script>
+
+/* DATA */
+let recipes = [];
+let currentRecipe = null;
+
+/* COOK */
+let steps = [];
+let stepIndex = 0;
+
+/* ✅ AI RECEPT */
+function makeRecipe(){
+
+  let text = document.getElementById("input").value.toLowerCase();
+
+  if(!text){
+    alert("Typ wat je wilt eten");
+    return;
+  }
+
+  let items = [];
+  let s = [];
+
+  /* slim toevoegen */
+  if(text.includes("kip")){
+    items.push("150g kipfilet");
+    s.push("Snijd de kip in blokjes");
+    s.push("Bak de kip goudbruin");
+  }
+
+  if(text.includes("pasta")){
+    items.push("100g pasta");
+    s.push("Kook de pasta volgens verpakking");
+  }
+
+  if(text.includes("rijst")){
+    items.push("100g rijst");
+    s.push("Kook de rijst 8-10 minuten");
+  }
+
+  if(text.includes("gezond")){
+    items.push("100g groenten");
+    s.push("Snijd de groenten en bak kort mee");
+  }
+
+  /* fallback */
+  if(items.length === 0){
+    items.push("Ingrediënt naar keuze");
+    s.push("Bereid naar smaak");
+  }
+
+  s.push("Meng alles en serveer");
+
+  currentRecipe = {
+    name: text,
+    items: items,
+    steps: s
+  };
+
+  /* preview tonen */
+  document.getElementById("preview").innerHTML = `
+    <div class="title">🍳 ${text}</div>
+
+    <b>Ingrediënten</b><br>
+    ${items.join("<br>")}
+
+    <br><br>
+
+    <b>Bereiding</b><br>
+    ${s.map((x,i)=> (i+1)+". "+x).join("<br>")}
+  `;
+}
+
+/* ✅ OPSLAAN */
+function saveRecipe(){
+
+  if(!currentRecipe){
+    alert("Maak eerst een recept");
+    return;
+  }
+
+  recipes.push(currentRecipe);
+  currentRecipe = null;
+
+  document.getElementById("preview").innerHTML = "";
+
+  render();
+}
+
+/* ✅ VERWIJDER */
+function deleteRecipe(i){
+  recipes.splice(i,1);
+  render();
+}
+
+/* ✅ RENDER */
+function render(){
+
+  let html = "";
+
+  recipes.forEach((r,i)=>{
+
+    html += `
+    <div class="card">
+
+      <div class="title">${r.name}</div>
+
+      <div class="small">Ingrediënten</div>
+      ${r.items.join("<br>")}
+
+      <br>
+
+      <div class="small">Stappen</div>
+      ${r.steps.map((s,j)=> (j+1)+". "+s).join("<br>")}
+
+      <button onclick="startCook(${i})">👨‍🍳 Start koken</button>
+      <button class="delete" onclick="deleteRecipe(${i})">🗑 Verwijder</button>
+
+    </div>
+    `;
+  });
+
+  document.getElementById("recipes").innerHTML = html;
+}
+
+/* ✅ KOOK MODUS */
+function startCook(i){
+  steps = recipes[i].steps;
+  stepIndex = 0;
+
+  document.getElementById("cook").style.display = "block";
+
+  showStep();
+}
+
+function showStep(){
+  document.getElementById("cookStep").innerText =
+    "Stap " + (stepIndex+1) + "\n\n" + steps[stepIndex];
+}
+
+function nextStep(){
+  if(stepIndex < steps.length - 1){
+    stepIndex++;
+    showStep();
+  }
+}
+
+function prevStep(){
+  if(stepIndex > 0){
+    stepIndex--;
+    showStep();
+  }
+}
+
+function closeCook(){
+  document.getElementById("cook").style.display = "none";
+}
+
+</script>
+
+</body>
+</html>
