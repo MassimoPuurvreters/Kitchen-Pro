@@ -1,1 +1,236 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Keuken App</title>
 
+<style>
+body {
+  font-family: system-ui;
+  margin:0;
+  background:#f5f7fa;
+}
+
+header {
+  background:white;
+  padding:15px;
+  font-weight:bold;
+  font-size:18px;
+  box-shadow:0 2px 5px rgba(0,0,0,0.05);
+}
+
+.container {
+  padding:15px;
+}
+
+.card {
+  background:white;
+  padding:15px;
+  margin-bottom:12px;
+  border-radius:16px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.05);
+}
+
+button {
+  padding:6px 10px;
+  margin:3px;
+  border:none;
+  border-radius:8px;
+  background:#007bff;
+  color:white;
+  cursor:pointer;
+}
+
+button.danger {
+  background:#ff4d4d;
+}
+
+button.small {
+  font-size:12px;
+  padding:4px 6px;
+}
+
+input, textarea {
+  width:100%;
+  padding:8px;
+  margin-top:5px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+.row {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+</style>
+</head>
+
+<body>
+
+<header>🍳 Keuken App</header>
+
+<div class="container">
+
+<div class="card">
+👥 Personen:
+<input type="number" id="people" value="4" onchange="render()">
+</div>
+
+<div class="card">
+<h3>📥 Recept importeren</h3>
+<textarea id="input" placeholder="Rijst 100 g&#10;Kip 150 g"></textarea>
+<button onclick="importRecipe()">Importeer</button>
+</div>
+
+<div class="card">
+<h3>✋ Zelf recept maken</h3>
+<button onclick="addRecipe()">+ Nieuw recept</button>
+</div>
+
+<div id="recipes"></div>
+
+<div class="card">
+<h3>🛒 Boodschappenlijst</h3>
+<div id="list"></div>
+</div>
+
+</div>
+
+<script>
+
+let recipes = [];
+
+function addRecipe(){
+  let name = prompt("Naam recept:");
+  if(!name) return;
+
+  recipes.push({name:name, ings:[]});
+  render();
+}
+
+function importRecipe(){
+  let name = prompt("Naam recept:");
+  let text = document.getElementById("input").value;
+
+  let lines = text.split("\\n");
+  let ings = [];
+
+  lines.forEach(line=>{
+    let parts = line.trim().split(" ");
+    if(parts.length >= 3){
+      let n = parts[0];
+      let amt = Number(parts[1]);
+      let unit = parts[2];
+
+      if(!isNaN(amt)){
+        ings.push({name:n, portion:amt, unit:unit});
+      }
+    }
+  });
+
+  recipes.push({name:name, ings:ings});
+  render();
+}
+
+function addIngredient(i){
+  let n = prompt("Ingrediënt:");
+  let amt = Number(prompt("Per persoon:"));
+  let unit = prompt("Eenheid:");
+
+  if(n && !isNaN(amt)){
+    recipes[i].ings.push({name:n, portion:amt, unit:unit});
+    render();
+  }
+}
+
+function editIng(i,j){
+  let ing = recipes[i].ings[j];
+
+  let n = prompt("Naam:", ing.name);
+  let amt = prompt("Per persoon:", ing.portion);
+  let unit = prompt("Eenheid:", ing.unit);
+
+  recipes[i].ings[j] = {name:n, portion:Number(amt), unit:unit};
+  render();
+}
+
+function deleteIng(i,j){
+  recipes[i].ings.splice(j,1);
+  render();
+}
+
+function deleteRecipe(i){
+  if(confirm("Recept verwijderen?")){
+    recipes.splice(i,1);
+    render();
+  }
+}
+
+function getList(){
+  let totals = {};
+  let p = Number(document.getElementById("people").value);
+
+  recipes.forEach(r=>{
+    r.ings.forEach(i=>{
+      let key = i.name + " ("+i.unit+")";
+      let val = Math.round(i.portion * p * 4)/4;
+
+      totals[key] = (totals[key]||0) + val;
+    });
+  });
+
+  return totals;
+}
+
+function render(){
+
+  let p = Number(document.getElementById("people").value);
+  let html = "";
+
+  recipes.forEach((r,i)=>{
+    html += `<div class="card">
+      <div class="row">
+        <b>${r.name}</b>
+        <button class="danger small" onclick="deleteRecipe(${i})">🗑</button>
+      </div>
+
+      <button onclick="addIngredient(${i})">+ ingrediënt</button>
+    `;
+
+    r.ings.forEach((ing,j)=>{
+      let val = Math.round(ing.portion * p * 4)/4;
+
+      html += `
+        <div class="row">
+          <span>${ing.name}: ${val} ${ing.unit}</span>
+          <div>
+            <button class="small" onclick="editIng(${i},${j})">✏️</button>
+            <button class="danger small" onclick="deleteIng(${i},${j})">❌</button>
+          </div>
+        </div>
+      `;
+    });
+
+    html += "</div>";
+  });
+
+  document.getElementById("recipes").innerHTML = html;
+
+  let list = getList();
+  let listHTML = "";
+
+  for(let k in list){
+    listHTML += `<div>${k}: ${list[k]}</div>`;
+  }
+
+  document.getElementById("list").innerHTML = listHTML;
+}
+
+render();
+
+</script>
+
+</body>
+</html>
