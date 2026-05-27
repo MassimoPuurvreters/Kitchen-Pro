@@ -1,1 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<title>Keuken App</title>
 
+<style>
+body {
+  margin:0;
+  font-family: system-ui;
+  background:#181818;
+  color:white;
+}
+
+/* header */
+header {
+  padding:15px;
+  text-align:center;
+  background:#222;
+  font-size:18px;
+}
+
+/* cards */
+.card {
+  background:#252525;
+  margin:12px;
+  padding:15px;
+  border-radius:14px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.3);
+}
+
+/* input */
+input {
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  background:#333;
+  color:white;
+  margin-top:5px;
+}
+
+/* button */
+button {
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  background:#007aff;
+  color:white;
+  margin-top:8px;
+  font-weight:bold;
+}
+
+/* recipe styles */
+.recipe-title {
+  font-size:18px;
+  margin-bottom:8px;
+}
+
+/* cook mode */
+#cook {
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#111;
+  padding:20px;
+}
+
+#step {
+  font-size:28px;
+  text-align:center;
+  margin-top:80px;
+}
+</style>
+
+</head>
+<body>
+
+<header>🍳 Keuken App</header>
+
+<div class="card">
+<input id="input" placeholder="bijv: kip pasta gezond">
+<button onclick="generate()">✨ Maak AI recept</button>
+</div>
+
+<div id="result" class="card"></div>
+
+<div class="card">
+<button onclick="saveRecipe()">✅ Opslaan</button>
+</div>
+
+<div id="recipes"></div>
+
+<!-- KOOK MODUS -->
+<div id="cook">
+<div id="step"></div>
+
+<div style="position:absolute;bottom:20px;width:100%;">
+<button onclick="prev()">⬅️ Vorige</button>
+<button onclick="next()">➡️ Volgende</button>
+<button onclick="closeCook()">❌ Stop</button>
+</div>
+</div>
+
+<script>
+
+let recipes = [];
+let temp = null;
+let steps = [];
+let index = 0;
+
+/* ✅ AI GENERATOR */
+function generate(){
+
+  let q = document.getElementById("input").value.toLowerCase();
+
+  if(!q){
+    alert("Typ iets");
+    return;
+  }
+
+  let items = [];
+  let s = [];
+
+  if(q.includes("kip")){
+    items.push("150g kip");
+    s.push("Snijd de kip in stukjes");
+    s.push("Bak de kip goudbruin");
+  }
+
+  if(q.includes("pasta")){
+    items.push("100g pasta");
+    s.push("Kook de pasta");
+  }
+
+  if(q.includes("rijst")){
+    items.push("100g rijst");
+    s.push("Kook de rijst");
+  }
+
+  if(q.includes("gezond")){
+    items.push("100g groenten");
+    s.push("Voeg groenten toe");
+  }
+
+  if(items.length === 0){
+    items.push("Ingrediënt naar keuze");
+    s.push("Bereid naar smaak");
+  }
+
+  s.push("Meng alles en serveer");
+
+  temp = { name:q, items:items, steps:s };
+
+  document.getElementById("result").innerHTML = `
+    <div class="recipe-title">🍳 ${q}</div>
+
+    <b>Ingrediënten</b><br>
+    ${items.join("<br>")}
+
+    <br><br>
+
+    <b>Bereiding</b><br>
+    ${s.map((x,i)=> (i+1)+". "+x).join("<br>")}
+  `;
+}
+
+/* ✅ OPSLAAN */
+function saveRecipe(){
+
+  if(!temp){
+    alert("Maak eerst een recept");
+    return;
+  }
+
+  recipes.push(temp);
+  render();
+}
+
+/* ✅ RENDER */
+function render(){
+
+  let html = "";
+
+  recipes.forEach((r,i)=>{
+
+    html += `
+    <div class="card">
+
+      <div class="recipe-title">${r.name}</div>
+
+      <b>Ingrediënten:</b><br>
+      ${r.items.join("<br>")}
+
+      <br><br>
+
+      <b>Bereiding:</b><br>
+      ${r.steps.map((x,j)=> (j+1)+". "+x).join("<br>")}
+
+      <button onclick="cook(${i})">👨‍🍳 Start koken</button>
+
+    </div>
+    `;
+  });
+
+  document.getElementById("recipes").innerHTML = html;
+}
+
+/* ✅ KOOK MODUS */
+function cook(i){
+  steps = recipes[i].steps;
+  index = 0;
+  document.getElementById("cook").style.display = "block";
+  show();
+}
+
+function show(){
+  document.getElementById("step").innerText =
+    "Stap " + (index+1) + "\n\n" + steps[index];
+}
+
+function next(){
+  if(index < steps.length-1){
+    index++;
+    show();
+  }
+}
+
+function prev(){
+  if(index > 0){
+    index--;
+    show();
+  }
+}
+
+function closeCook(){
+  document.getElementById("cook").style.display = "none";
+}
+
+</script>
+
+</body>
+</html>
