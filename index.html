@@ -1,1 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<title>Keuken App</title>
+
+<style>
+body {
+  margin:0;
+  font-family: Arial;
+  background:#111;
+  color:white;
+}
+
+header {
+  padding:15px;
+  text-align:center;
+  background:#222;
+  font-size:18px;
+}
+
+.box {
+  margin:10px;
+  padding:10px;
+  background:#1f1f1f;
+  border-radius:10px;
+}
+
+input {
+  width:100%;
+  padding:8px;
+  border:none;
+  border-radius:6px;
+  background:#333;
+  color:white;
+}
+
+button {
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:6px;
+  margin-top:6px;
+  background:#007aff;
+  color:white;
+}
+
+.delete {
+  background:#ff3b30;
+}
+
+.big {
+  font-size:24px;
+  text-align:center;
+  margin-top:50px;
+}
+</style>
+
+</head>
+<body>
+
+<header>🍳 Keuken App</header>
+
+<div class="box">
+<input id="input" placeholder="bijv: kip pasta gezond">
+<button onclick="make()">✨ Maak recept</button>
+</div>
+
+<div id="preview" class="box"></div>
+
+<div class="box">
+<button onclick="save()">✅ Opslaan</button>
+</div>
+
+<div id="recipes"></div>
+
+<div class="box">
+<h3>🛒 Boodschappenlijst</h3>
+<div id="list"></div>
+<button onclick="printList()">🖨️ Print</button>
+</div>
+
+<!-- COOK MODE -->
+<div id="cook" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:black;">
+  
+  <div id="step" class="big"></div>
+
+  <div style="position:absolute; bottom:20px; width:100%;">
+    <button onclick="prev()">⬅️</button>
+    <button onclick="next()">➡️</button>
+    <button onclick="closeCook()">❌</button>
+  </div>
+
+</div>
+
+<script>
+
+let recipes = [];
+let current = null;
+
+let steps = [];
+let index = 0;
+
+/* ✅ AI RECEPT */
+function make(){
+
+  let text = document.getElementById("input").value.toLowerCase();
+
+  if(!text){
+    alert("Typ iets");
+    return;
+  }
+
+  let items = [];
+  let s = [];
+
+  if(text.includes("kip")){
+    items.push("kip");
+    s.push("Snijd de kip");
+    s.push("Bak de kip");
+  }
+
+  if(text.includes("pasta")){
+    items.push("pasta");
+    s.push("Kook de pasta");
+  }
+
+  if(text.includes("rijst")){
+    items.push("rijst");
+    s.push("Kook de rijst");
+  }
+
+  if(text.includes("gezond")){
+    items.push("groenten");
+    s.push("Voeg groenten toe");
+  }
+
+  if(items.length === 0){
+    items.push("ingrediënt");
+    s.push("Bereid naar smaak");
+  }
+
+  s.push("Meng alles");
+
+  current = {
+    name: text,
+    items: items,
+    steps: s
+  };
+
+  document.getElementById("preview").innerHTML = `
+    <b>${text}</b><br><br>
+
+    <b>Ingrediënten:</b><br>
+    ${items.join("<br>")}
+
+    <br><br>
+
+    <b>Stappen:</b><br>
+    ${s.map((x,i)=> (i+1)+". "+x).join("<br>")}
+  `;
+}
+
+/* ✅ OPSLAAN */
+function save(){
+
+  if(!current){
+    alert("Maak eerst een recept");
+    return;
+  }
+
+  recipes.push(current);
+  render();
+}
+
+/* ✅ DELETE */
+function remove(i){
+  recipes.splice(i,1);
+  render();
+}
+
+/* ✅ BOODSCHAPPENLIJST */
+function buildList(){
+
+  let list = {};
+
+  recipes.forEach(r=>{
+    r.items.forEach(i=>{
+      list[i] = (list[i] || 0) + 1;
+    });
+  });
+
+  return list;
+}
+
+/* ✅ PRINT */
+function printList(){
+
+  let list = buildList();
+
+  let text = "BOODSCHAPPENLIJST\n\n";
+
+  for(let k in list){
+    text += "- " + k + " x" + list[k] + "\n";
+  }
+
+  let win = window.open("", "", "width=400,height=600");
+
+  win.document.write("<pre>"+text+"</pre>");
+  win.print();
+}
+
+/* ✅ RENDER */
+function render(){
+
+  let html = "";
+
+  recipes.forEach((r,i)=>{
+
+    html += `
+    <div class="box">
+      <b>${r.name}</b><br><br>
+
+      ${r.items.join(", ")}
+      <br><br>
+
+      ${r.steps.map((s,j)=> (j+1)+". "+s).join("<br>")}
+
+      <button onclick="cook(${i})">👨‍🍳 Koken</button>
+      <button class="delete" onclick="remove(${i})">🗑</button>
+    </div>
+    `;
+  });
+
+  document.getElementById("recipes").innerHTML = html;
+
+  /* update boodschappenlijst */
+  let list = buildList();
+  let lhtml = "";
+
+  for(let k in list){
+    lhtml += `<div>- ${k} x${list[k]}</div>`;
+  }
+
+  document.getElementById("list").innerHTML = lhtml;
+}
+
+/* ✅ KOOK MODUS */
+function cook(i){
+  steps = recipes[i].steps;
+  index = 0;
+  document.getElementById("cook").style.display = "block";
+  show();
+}
+
+function show(){
+  document.getElementById("step").innerText =
+    "Stap " + (index+1) + "\n\n" + steps[index];
+}
+
+function next(){
+  if(index < steps.length-1){
+    index++;
+    show();
+  }
+}
+
+function prev(){
+  if(index > 0){
+    index--;
+    show();
+  }
+}
+
+function closeCook(){
+  document.getElementById("cook").style.display = "none";
+}
+
+</script>
+
+</body>
+</html>
 
